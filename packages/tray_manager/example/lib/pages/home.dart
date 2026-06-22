@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> with TrayListener {
   Future<void> _handleSetIcon(String iconType) async {
     _iconType = iconType;
     String iconPath =
-    Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+        Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
 
     if (_iconType == 'original') {
       iconPath = Platform.isWindows
@@ -101,10 +101,10 @@ class _HomePageState extends State<HomePage> with TrayListener {
               Builder(
                 builder: (_) {
                   bool isFlashing =
-                  (_iconFlashTimer != null && _iconFlashTimer!.isActive);
+                      (_iconFlashTimer != null && _iconFlashTimer!.isActive);
                   return TextButton(
                     onPressed:
-                    isFlashing ? _stopIconFlashing : _startIconFlashing,
+                        isFlashing ? _stopIconFlashing : _startIconFlashing,
                     child: isFlashing
                         ? const Text('stop flash')
                         : const Text('start flash'),
@@ -160,7 +160,7 @@ class _HomePageState extends State<HomePage> with TrayListener {
               final isRefreshing = _titleRefreshTimer?.isActive ?? false;
               return TextButton(
                 onPressed:
-                isRefreshing ? _stopTitleRefreshing : _startTitleRefreshing,
+                    isRefreshing ? _stopTitleRefreshing : _startTitleRefreshing,
                 child: Text(isRefreshing ? 'stop refresh' : 'start refresh'),
               );
             },

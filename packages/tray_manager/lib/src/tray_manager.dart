@@ -30,6 +30,7 @@ class TrayManager {
   final MethodChannel _channel = const MethodChannel('tray_manager');
 
   final ObserverList<TrayListener> _listeners = ObserverList<TrayListener>();
+  Brightness? _menuBrightness;
 
   double get _devicePixelRatio {
     final flutterView = WidgetsBinding.instance.platformDispatcher.views.single;
@@ -177,10 +178,16 @@ class TrayManager {
   }
 
   /// Sets the context menu for this icon.
-  Future<void> setContextMenu(Menu menu) async {
+  Future<void> setContextMenu(
+    Menu menu, {
+    Brightness? brightness,
+  }) async {
     _menu = menu;
+    final effectiveBrightness = brightness ?? _menuBrightness;
+    _menuBrightness = effectiveBrightness;
     final Map<String, dynamic> arguments = {
       'menu': menu.toJson(),
+      'brightness': effectiveBrightness?.name,
     };
     await _channel.invokeMethod('setContextMenu', arguments);
   }
