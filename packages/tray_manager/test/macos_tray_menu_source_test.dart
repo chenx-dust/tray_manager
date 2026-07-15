@@ -50,6 +50,14 @@ void main() {
     expect(trayMenuSource, contains('paragraphStyle.alignment = .right'));
   });
 
+  test('macOS custom menu items use native-style hover highlighting', () {
+    expect(trayMenuSource, contains('let highlightRect = bounds.insetBy('));
+    expect(trayMenuSource, contains('roundedRect: highlightRect'));
+    expect(trayMenuSource, contains('Metrics.highlightCornerRadius'));
+    expect(trayMenuSource, contains('.selectedMenuItemTextColor'));
+    expect(trayMenuSource, isNot(contains('bounds.fill()')));
+  });
+
   test('macOS custom menu items preserve checkbox and click behavior', () {
     expect(trayMenuSource, contains('drawCheckmark'));
     expect(trayMenuSource, contains('if !keepsMenuOpen'));

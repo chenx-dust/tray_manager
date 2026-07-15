@@ -21,12 +21,15 @@ private final class TrayMenuItemView: NSView {
         static let maximumWidth: CGFloat = 520
         static let checkmarkLeading: CGFloat = 7
         static let titleLeading: CGFloat = 25
-        static let titleBadgeSpacing: CGFloat = 18
+        static let titleBadgeSpacing: CGFloat = 12
         static let trailing: CGFloat = 9
-        static let badgeHeight: CGFloat = 18
-        static let badgeHorizontalPadding: CGFloat = 7
+        static let badgeHeight: CGFloat = 16
+        static let badgeHorizontalPadding: CGFloat = 5
         static let submenuIndicatorWidth: CGFloat = 14
         static let minimumTitleWidth: CGFloat = 60
+        static let highlightHorizontalInset: CGFloat = 5
+        static let highlightVerticalInset: CGFloat = 0
+        static let highlightCornerRadius: CGFloat = 6
     }
 
     private var label: String
@@ -40,7 +43,7 @@ private final class TrayMenuItemView: NSView {
 
     private let titleFont = NSFont.menuFont(ofSize: 0)
     private let badgeFont = NSFont.monospacedDigitSystemFont(
-        ofSize: NSFont.smallSystemFontSize,
+        ofSize: NSFont.labelFontSize,
         weight: .medium
     )
 
@@ -222,7 +225,15 @@ private final class TrayMenuItemView: NSView {
             } else {
                 NSColor.alternateSelectedControlColor.setFill()
             }
-            bounds.fill()
+            let highlightRect = bounds.insetBy(
+                dx: Metrics.highlightHorizontalInset,
+                dy: Metrics.highlightVerticalInset
+            )
+            NSBezierPath(
+                roundedRect: highlightRect,
+                xRadius: Metrics.highlightCornerRadius,
+                yRadius: Metrics.highlightCornerRadius
+            ).fill()
         }
 
         drawCheckmark(highlighted: highlighted, enabled: menuItem.isEnabled)
@@ -239,7 +250,7 @@ private final class TrayMenuItemView: NSView {
         if !enabled {
             color = .tertiaryLabelColor
         } else if highlighted {
-            color = .alternateSelectedControlTextColor
+            color = .selectedMenuItemTextColor
         } else {
             color = .labelColor
         }
@@ -263,7 +274,7 @@ private final class TrayMenuItemView: NSView {
         if !enabled {
             color = .tertiaryLabelColor
         } else if highlighted {
-            color = .alternateSelectedControlTextColor
+            color = .selectedMenuItemTextColor
         } else {
             color = .labelColor
         }
@@ -325,7 +336,7 @@ private final class TrayMenuItemView: NSView {
             if !enabled {
                 color = .tertiaryLabelColor
             } else if highlighted {
-                color = .alternateSelectedControlTextColor
+                color = .selectedMenuItemTextColor
             } else {
                 color = .secondaryLabelColor
             }
@@ -396,7 +407,7 @@ private final class TrayMenuItemView: NSView {
         if !enabled {
             color = .tertiaryLabelColor
         } else if highlighted {
-            color = .alternateSelectedControlTextColor
+            color = .selectedMenuItemTextColor
         } else {
             color = .labelColor
         }

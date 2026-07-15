@@ -61,7 +61,7 @@ public class TrayIcon: NSView {
     private let stackView: NSStackView = {
         let stack = NSStackView()
         stack.orientation = .horizontal
-        stack.spacing = 6
+        stack.spacing = 2
         stack.distribution = .equalSpacing
         return stack
     }()
@@ -71,15 +71,15 @@ public class TrayIcon: NSView {
         super.init(frame: NSRect.zero)
         statusItem = NSStatusBar.system.statusItem(withLength:NSStatusItem.variableLength)
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.maximumLineHeight = 9
-        paragraphStyle.minimumLineHeight = 9
+        paragraphStyle.maximumLineHeight = 9.5
+        paragraphStyle.minimumLineHeight = 9.5
         paragraphStyle.alignment = .right
         paragraphStyle.lineBreakMode = .byClipping
         
         textAttributes = [
             .paragraphStyle: paragraphStyle,
-            .font: NSFont.systemFont(ofSize: 8.75),
-            .foregroundColor: NSColor.labelColor
+            .font: NSFont.systemFont(ofSize: 9, weight: .medium),
+            .foregroundColor: NSColor.textColor,
         ]
         
         if let button = statusItem?.button {
