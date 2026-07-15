@@ -60,6 +60,9 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
         case "setContextMenu":
             setContextMenu(call, result: result)
             break
+        case "updateMenuItem":
+            updateMenuItem(call, result: result)
+            break
         case "popUpContextMenu":
             popUpContextMenu(call, result: result)
             break
@@ -192,8 +195,16 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     
     public func setContextMenu(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let args:[String: Any] = call.arguments as! [String: Any]
+        let menuArgs = args["menu"] as! [String: Any]
+
+        if let currentMenu = trayMenu,
+           trayIcon?.statusItem?.menu === currentMenu,
+           currentMenu.update(menuArgs) {
+            result(true)
+            return
+        }
         
-        trayMenu = TrayMenu(args["menu"] as! [String: Any])
+        trayMenu = TrayMenu(menuArgs)
         trayMenu?.onMenuItemClick = { [weak self] (menuItem: NSMenuItem) in
             guard let strongSelf = self else { return }
             let args: NSDictionary = [
@@ -204,6 +215,11 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
         trayMenu?.delegate = self
         
         result(true)
+    }
+
+    public func updateMenuItem(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let args = call.arguments as? [String: Any] ?? [:]
+        result(trayMenu?.updateMenuItem(args) ?? false)
     }
     
     public func popUpContextMenu(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

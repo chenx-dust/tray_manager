@@ -10,6 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:shortid/shortid.dart';
 import 'package:tray_manager/src/helpers/sandbox.dart';
 import 'package:tray_manager/src/tray_listener.dart';
+import 'package:tray_manager/src/tray_menu_item.dart';
 
 const kEventOnTrayIconMouseDown = 'onTrayIconMouseDown';
 const kEventOnTrayIconMouseUp = 'onTrayIconMouseUp';
@@ -190,6 +191,48 @@ class TrayManager {
       'brightness': effectiveBrightness?.name,
     };
     await _channel.invokeMethod('setContextMenu', arguments);
+  }
+
+  /// Updates one menu item without rebuilding the context menu.
+  ///
+  /// The item must have a non-null [MenuItem.key]. This is currently supported
+  /// by the macOS implementation and is useful while a menu is open.
+  Future<void> updateMenuItem({
+    required String key,
+    String? label,
+    String? sublabel,
+    TrayMenuItemSublabelStyle? sublabelStyle,
+    bool? disabled,
+    bool? checked,
+  }) async {
+    final menuItem = _menu?.getMenuItem(key);
+    if (menuItem == null) {
+      return;
+    }
+    if (label != null) {
+      menuItem.label = label;
+    }
+    if (sublabel != null) {
+      menuItem.sublabel = sublabel;
+    }
+    if (sublabelStyle != null && menuItem is TrayMenuItem) {
+      menuItem.sublabelStyle = sublabelStyle;
+    }
+    if (disabled != null) {
+      menuItem.disabled = disabled;
+    }
+    if (checked != null) {
+      menuItem.checked = checked;
+    }
+    final arguments = <String, dynamic>{
+      'key': key,
+      'label': label,
+      'sublabel': sublabel,
+      'sublabelStyle': sublabelStyle?.name,
+      'disabled': disabled,
+      'checked': checked,
+    }..removeWhere((_, value) => value == null);
+    await _channel.invokeMethod('updateMenuItem', arguments);
   }
 
   /// Pops up the context menu of the tray icon.
