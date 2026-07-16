@@ -65,6 +65,14 @@ void main() {
     expect(trayMenuSource, contains('NSApp.sendAction'));
   });
 
+  test('macOS tray menu applies native keyboard shortcuts', () {
+    expect(trayMenuSource, contains('applyKeyboardShortcut'));
+    expect(trayMenuSource, contains('menuItem.keyEquivalent ='));
+    expect(trayMenuSource, contains('keyEquivalentModifierMask'));
+    expect(trayMenuSource, contains('modifierMask.insert(.command)'));
+    expect(trayMenuSource, contains('modifierMask.insert(.option)'));
+  });
+
   test('macOS tray menu updates open menu items in place', () {
     expect(trayMenuSource, contains('public func update(_ args:'));
     expect(trayMenuSource, contains('customView.update('));

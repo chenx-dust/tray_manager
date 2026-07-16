@@ -57,4 +57,23 @@ void main() {
     expect(item.toJson(), containsPair('usesCustomView', true));
     expect(item.toJson(), containsPair('keepsMenuOpen', true));
   });
+
+  test('tray menu item serializes a native keyboard shortcut', () {
+    final item = TrayMenuItem(
+      label: 'Start',
+      usesCustomView: false,
+      keyEquivalent: 's',
+      keyEquivalentModifiers: const {
+        TrayMenuItemModifier.command,
+        TrayMenuItemModifier.shift,
+      },
+    );
+
+    expect(item.toJson(), containsPair('usesCustomView', false));
+    expect(item.toJson(), containsPair('keyEquivalent', 's'));
+    expect(
+      item.toJson()['keyEquivalentModifiers'],
+      containsAll(['command', 'shift']),
+    );
+  });
 }

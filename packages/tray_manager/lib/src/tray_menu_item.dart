@@ -3,6 +3,16 @@ import 'package:menu_base/menu_base.dart';
 /// The visual style used to render a menu item's secondary label.
 enum TrayMenuItemSublabelStyle { badge, muted, destructive, secondary }
 
+/// A keyboard modifier for a native macOS menu item shortcut.
+enum TrayMenuItemModifier {
+  capsLock,
+  command,
+  control,
+  function,
+  option,
+  shift,
+}
+
 /// A menu item with an optional secondary label.
 ///
 /// Secondary labels are currently rendered by the macOS implementation. Other
@@ -23,6 +33,9 @@ class TrayMenuItem extends MenuItem {
     super.onLoseHighlight,
     this.sublabelStyle = TrayMenuItemSublabelStyle.badge,
     this.keepsMenuOpen = false,
+    this.usesCustomView = true,
+    this.keyEquivalent,
+    this.keyEquivalentModifiers = const {},
   });
 
   TrayMenuItem.checkbox({
@@ -38,6 +51,9 @@ class TrayMenuItem extends MenuItem {
     super.onLoseHighlight,
     this.sublabelStyle = TrayMenuItemSublabelStyle.badge,
     this.keepsMenuOpen = false,
+    this.usesCustomView = true,
+    this.keyEquivalent,
+    this.keyEquivalentModifiers = const {},
   }) : super.checkbox();
 
   TrayMenuItem.submenu({
@@ -53,10 +69,16 @@ class TrayMenuItem extends MenuItem {
     super.onLoseHighlight,
     this.sublabelStyle = TrayMenuItemSublabelStyle.badge,
     this.keepsMenuOpen = false,
+    this.usesCustomView = true,
+    this.keyEquivalent,
+    this.keyEquivalentModifiers = const {},
   }) : super.submenu();
 
   TrayMenuItemSublabelStyle sublabelStyle;
   final bool keepsMenuOpen;
+  final bool usesCustomView;
+  final String? keyEquivalent;
+  final Set<TrayMenuItemModifier> keyEquivalentModifiers;
 
   @override
   Map<String, dynamic> toJson() {
@@ -64,8 +86,12 @@ class TrayMenuItem extends MenuItem {
       ..addAll({
         if (sublabel != null) 'sublabel': sublabel,
         'sublabelStyle': sublabelStyle.name,
-        'usesCustomView': true,
+        'usesCustomView': usesCustomView,
         'keepsMenuOpen': keepsMenuOpen,
+        if (keyEquivalent != null) 'keyEquivalent': keyEquivalent,
+        if (keyEquivalentModifiers.isNotEmpty)
+          'keyEquivalentModifiers':
+              keyEquivalentModifiers.map((modifier) => modifier.name).toList(),
       });
   }
 }

@@ -14,6 +14,35 @@ private enum TrayMenuItemSublabelStyle: String {
     case secondary
 }
 
+private func applyKeyboardShortcut(
+    _ itemArguments: [String: Any],
+    to menuItem: NSMenuItem
+) {
+    menuItem.keyEquivalent = itemArguments["keyEquivalent"] as? String ?? ""
+    let modifierNames = itemArguments["keyEquivalentModifiers"] as? [String]
+        ?? []
+    var modifierMask: NSEvent.ModifierFlags = []
+    for modifierName in modifierNames {
+        switch modifierName {
+        case "capsLock":
+            modifierMask.insert(.capsLock)
+        case "command":
+            modifierMask.insert(.command)
+        case "control":
+            modifierMask.insert(.control)
+        case "function":
+            modifierMask.insert(.function)
+        case "option":
+            modifierMask.insert(.option)
+        case "shift":
+            modifierMask.insert(.shift)
+        default:
+            break
+        }
+    }
+    menuItem.keyEquivalentModifierMask = modifierMask
+}
+
 private final class TrayMenuItemView: NSView {
     private enum Metrics {
         static let height: CGFloat = 24
@@ -470,6 +499,7 @@ public class TrayMenu: NSMenu, NSMenuDelegate {
             menuItem.isEnabled = !disabled
             menuItem.action = !disabled ? #selector(statusItemMenuButtonClicked) : nil
             menuItem.target = self
+            applyKeyboardShortcut(itemDict, to: menuItem)
 
             switch type {
             case "separator":
@@ -547,6 +577,7 @@ public class TrayMenu: NSMenu, NSMenuDelegate {
                 ? #selector(statusItemMenuButtonClicked)
                 : nil
             menuItem.target = self
+            applyKeyboardShortcut(itemDict, to: menuItem)
 
             if type == "checkbox" {
                 if let checked {
