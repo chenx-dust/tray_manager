@@ -70,6 +70,7 @@ public class TrayIcon: NSView {
     public init() {
         super.init(frame: NSRect.zero)
         statusItem = NSStatusBar.system.statusItem(withLength:NSStatusItem.variableLength)
+        statusItem?.autosaveName = "\(Bundle.main.bundleIdentifier ?? "tray_manager").statusItem"
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.maximumLineHeight = 9.5
         paragraphStyle.minimumLineHeight = 9.5

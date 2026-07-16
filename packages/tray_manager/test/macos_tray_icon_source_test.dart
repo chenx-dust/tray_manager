@@ -23,6 +23,12 @@ void main() {
     expect(trayIconSource, isNot(contains('NSTextField')));
   });
 
+  test('macOS tray position uses an app-specific autosave name', () {
+    expect(trayIconSource, contains('statusItem?.autosaveName'));
+    expect(trayIconSource, contains('Bundle.main.bundleIdentifier'));
+    expect(trayIconSource, contains('.statusItem'));
+  });
+
   test('macOS tray icon position reorders image and title views', () {
     expect(trayIconSource, contains('applyImagePosition'));
     expect(trayIconSource, contains('insertArrangedSubview'));
