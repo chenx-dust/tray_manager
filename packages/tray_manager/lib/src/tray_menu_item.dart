@@ -1,5 +1,21 @@
 import 'package:menu_base/menu_base.dart';
 
+/// Details associated with a native tray menu item activation.
+class TrayMenuItemClickDetails {
+  const TrayMenuItemClickDetails({this.activationTimestamp});
+
+  /// The native input event timestamp, when the platform provides one.
+  ///
+  /// On Linux this can be forwarded to a window presentation request so the
+  /// window manager can associate it with the user's tray menu interaction.
+  final int? activationTimestamp;
+}
+
+typedef TrayMenuItemClickWithDetails = void Function(
+  TrayMenuItem menuItem,
+  TrayMenuItemClickDetails details,
+);
+
 /// The visual style used to render a menu item's secondary label.
 enum TrayMenuItemSublabelStyle { badge, muted, destructive, secondary }
 
@@ -29,6 +45,7 @@ class TrayMenuItem extends MenuItem {
     super.disabled,
     super.submenu,
     super.onClick,
+    this.onClickWithDetails,
     super.onHighlight,
     super.onLoseHighlight,
     this.sublabelStyle = TrayMenuItemSublabelStyle.badge,
@@ -47,6 +64,7 @@ class TrayMenuItem extends MenuItem {
     required super.checked,
     super.disabled,
     super.onClick,
+    this.onClickWithDetails,
     super.onHighlight,
     super.onLoseHighlight,
     this.sublabelStyle = TrayMenuItemSublabelStyle.badge,
@@ -65,6 +83,7 @@ class TrayMenuItem extends MenuItem {
     super.disabled,
     super.submenu,
     super.onClick,
+    this.onClickWithDetails,
     super.onHighlight,
     super.onLoseHighlight,
     this.sublabelStyle = TrayMenuItemSublabelStyle.badge,
@@ -79,6 +98,11 @@ class TrayMenuItem extends MenuItem {
   final bool usesCustomView;
   final String? keyEquivalent;
   final Set<TrayMenuItemModifier> keyEquivalentModifiers;
+
+  /// Invoked with native activation details when available.
+  ///
+  /// When this callback is set, it is used instead of [onClick].
+  final TrayMenuItemClickWithDetails? onClickWithDetails;
 
   @override
   Map<String, dynamic> toJson() {

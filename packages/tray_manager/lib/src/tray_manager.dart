@@ -60,7 +60,19 @@ class TrayManager {
           MenuItem? menuItem = _menu?.getMenuItemById(id);
           if (menuItem != null) {
             bool? oldChecked = menuItem.checked;
-            if (menuItem.onClick != null) {
+            final activationTimestamp = call.arguments['activationTimestamp'];
+            if (menuItem is TrayMenuItem &&
+                menuItem.onClickWithDetails != null) {
+              menuItem.onClickWithDetails!(
+                menuItem,
+                TrayMenuItemClickDetails(
+                  activationTimestamp:
+                      activationTimestamp is int && activationTimestamp > 0
+                          ? activationTimestamp
+                          : null,
+                ),
+              );
+            } else if (menuItem.onClick != null) {
               menuItem.onClick?.call(menuItem);
             }
             listener.onTrayMenuItemClick(menuItem);

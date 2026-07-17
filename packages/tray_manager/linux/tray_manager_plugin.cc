@@ -4,6 +4,10 @@
 #include <gtk/gtk.h>
 #include <sys/utsname.h>
 
+#ifdef GDK_WINDOWING_X11
+#include <gdk/gdkx.h>
+#endif
+
 #ifdef HAVE_AYATANA
 #include <libayatana-appindicator/app-indicator.h>
 #else
@@ -39,11 +43,32 @@ GtkWindow* get_window(TrayManagerPlugin* self) {
   return GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+guint32 get_activation_timestamp() {
+  guint32 timestamp = gtk_get_current_event_time();
+#ifdef GDK_WINDOWING_X11
+  if (timestamp == GDK_CURRENT_TIME) {
+    GtkWindow* window = get_window(plugin_instance);
+    GdkWindow* gdk_window =
+        window == nullptr ? nullptr : gtk_widget_get_window(GTK_WIDGET(window));
+    if (gdk_window != nullptr && GDK_IS_X11_WINDOW(gdk_window)) {
+      timestamp = gdk_x11_get_server_time(gdk_window);
+    }
+  }
+#endif
+  return timestamp;
+}
+
 void _on_activate(GtkMenuItem* item, gpointer user_data) {
   gint id = GPOINTER_TO_INT(user_data);
+  guint32 activation_timestamp = get_activation_timestamp();
 
   g_autoptr(FlValue) result_data = fl_value_new_map();
   fl_value_set_string_take(result_data, "id", fl_value_new_int(id));
+  if (activation_timestamp != GDK_CURRENT_TIME) {
+    fl_value_set_string_take(
+        result_data, "activationTimestamp",
+        fl_value_new_int(static_cast<gint64>(activation_timestamp)));
+  }
   fl_method_channel_invoke_method(plugin_instance->channel,
                                   "onTrayMenuItemClick", result_data, nullptr,
                                   nullptr, nullptr);

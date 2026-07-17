@@ -7,9 +7,11 @@ void main() {
 
   const channel = MethodChannel('tray_manager');
   final calls = <MethodCall>[];
+  final listener = _TestTrayListener();
 
   setUp(() {
     calls.clear();
+    trayManager.addListener(listener);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
@@ -18,6 +20,7 @@ void main() {
   });
 
   tearDown(() {
+    trayManager.removeListener(listener);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
   });
@@ -51,4 +54,31 @@ void main() {
       'sublabelStyle': 'badge',
     });
   });
+
+  test('forwards native activation details to a tray menu item', () async {
+    int? receivedTimestamp;
+    final item = TrayMenuItem(
+      label: 'Show',
+      onClickWithDetails: (menuItem, details) {
+        receivedTimestamp = details.activationTimestamp;
+      },
+    );
+    await trayManager.setContextMenu(Menu(items: [item]));
+
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
+      'tray_manager',
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall('onTrayMenuItemClick', {
+          'id': item.id,
+          'activationTimestamp': 1234,
+        }),
+      ),
+      (_) {},
+    );
+
+    expect(receivedTimestamp, 1234);
+  });
 }
+
+class _TestTrayListener with TrayListener {}
