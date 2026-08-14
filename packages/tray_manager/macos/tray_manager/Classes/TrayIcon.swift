@@ -65,6 +65,11 @@ public class TrayIcon: NSView {
         stack.distribution = .equalSpacing
         return stack
     }()
+
+    private var stackLeadingConstraint: NSLayoutConstraint!
+    private var stackTrailingConstraint: NSLayoutConstraint!
+    private var stackTopConstraint: NSLayoutConstraint!
+    private var stackBottomConstraint: NSLayoutConstraint!
     
     
     public init() {
@@ -100,11 +105,15 @@ public class TrayIcon: NSView {
     private func setupView() {
         addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackLeadingConstraint = stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6)
+        stackTrailingConstraint = stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6)
+        stackTopConstraint = stackView.topAnchor.constraint(equalTo: topAnchor, constant: 0)
+        stackBottomConstraint = stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0)
         NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor,constant: 8),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor,constant: -8),
-            stackView.topAnchor.constraint(equalTo: topAnchor,constant:2),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor,constant:-2),
+            stackLeadingConstraint,
+            stackTrailingConstraint,
+            stackTopConstraint,
+            stackBottomConstraint,
         ])
         
         applyImagePosition("left")
@@ -152,13 +161,22 @@ public class TrayIcon: NSView {
     
     public func setTitle(_ title: String) {
         let wasHidden = textView.isHidden
+        let hasTitle = !title.isEmpty
         textView.attributedString = title.isEmpty
             ? nil
             : NSAttributedString(string: title, attributes: textAttributes)
-        textView.isHidden = title.isEmpty
+        textView.isHidden = !hasTitle
+        updateInsets(hasTitle: hasTitle)
         if wasHidden != textView.isHidden, let button = statusItem?.button {
             button.sizeToFit()
         }
+    }
+
+    private func updateInsets(hasTitle: Bool) {
+        stackLeadingConstraint.constant = hasTitle ? 4 : 6
+        stackTrailingConstraint.constant = hasTitle ? -8 : -6
+        stackTopConstraint.constant = 0
+        stackBottomConstraint.constant = 0
     }
 
     private func applyImagePosition(_ imagePosition: String) {
