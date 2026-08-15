@@ -57,10 +57,12 @@ void main() {
 
   test('forwards native activation details to a tray menu item', () async {
     int? receivedTimestamp;
+    String? receivedToken;
     final item = TrayMenuItem(
       label: 'Show',
       onClickWithDetails: (menuItem, details) {
         receivedTimestamp = details.activationTimestamp;
+        receivedToken = details.activationToken;
       },
     );
     await trayManager.setContextMenu(Menu(items: [item]));
@@ -72,12 +74,14 @@ void main() {
         MethodCall('onTrayMenuItemClick', {
           'id': item.id,
           'activationTimestamp': 1234,
+          'activationToken': 'activation-token',
         }),
       ),
       (_) {},
     );
 
     expect(receivedTimestamp, 1234);
+    expect(receivedToken, 'activation-token');
   });
 }
 

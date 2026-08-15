@@ -61,6 +61,7 @@ class TrayManager {
           if (menuItem != null) {
             bool? oldChecked = menuItem.checked;
             final activationTimestamp = call.arguments['activationTimestamp'];
+            final activationToken = call.arguments['activationToken'];
             if (menuItem is TrayMenuItem &&
                 menuItem.onClickWithDetails != null) {
               menuItem.onClickWithDetails!(
@@ -69,6 +70,10 @@ class TrayManager {
                   activationTimestamp:
                       activationTimestamp is int && activationTimestamp > 0
                           ? activationTimestamp
+                          : null,
+                  activationToken:
+                      activationToken is String && activationToken.isNotEmpty
+                          ? activationToken
                           : null,
                 ),
               );

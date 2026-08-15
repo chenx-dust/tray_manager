@@ -30,6 +30,9 @@ struct _TrayManagerPlugin {
   GObject parent_instance;
   FlPluginRegistrar* registrar;
   FlMethodChannel* channel;
+  GDBusConnection* session_bus;
+  guint session_bus_filter_id;
+  gchar* pending_activation_token;
 };
 
 G_DEFINE_TYPE(TrayManagerPlugin, tray_manager_plugin, g_object_get_type())
@@ -58,6 +61,49 @@ guint32 get_activation_timestamp() {
   return timestamp;
 }
 
+static gboolean set_pending_activation_token(gpointer data) {
+  if (plugin_instance != nullptr) {
+    const gchar* activation_token = static_cast<const gchar*>(data);
+    g_free(plugin_instance->pending_activation_token);
+    plugin_instance->pending_activation_token =
+        *activation_token == '\0' ? nullptr : g_strdup(activation_token);
+  }
+  return G_SOURCE_REMOVE;
+}
+
+static GDBusMessage* session_bus_filter(GDBusConnection* connection,
+                                        GDBusMessage* message,
+                                        gboolean incoming,
+                                        gpointer) {
+  if (!incoming ||
+      g_dbus_message_get_message_type(message) !=
+          G_DBUS_MESSAGE_TYPE_METHOD_CALL ||
+      g_strcmp0(g_dbus_message_get_interface(message),
+                "org.kde.StatusNotifierItem") != 0 ||
+      g_strcmp0(g_dbus_message_get_member(message),
+                "ProvideXdgActivationToken") != 0) {
+    return message;
+  }
+
+  GVariant* body = g_dbus_message_get_body(message);
+  if (body == nullptr || !g_variant_is_of_type(body, G_VARIANT_TYPE("(s)"))) {
+    return message;
+  }
+
+  const gchar* activation_token = nullptr;
+  g_variant_get(body, "(&s)", &activation_token);
+
+  g_main_context_invoke_full(nullptr, G_PRIORITY_DEFAULT,
+                             set_pending_activation_token,
+                             g_strdup(activation_token), g_free);
+
+  g_autoptr(GDBusMessage) reply = g_dbus_message_new_method_reply(message);
+  g_dbus_connection_send_message(
+      connection, reply, G_DBUS_SEND_MESSAGE_FLAGS_NONE, nullptr, nullptr);
+  g_object_unref(message);
+  return nullptr;
+}
+
 void _on_activate(GtkMenuItem* item, gpointer user_data) {
   gint id = GPOINTER_TO_INT(user_data);
   guint32 activation_timestamp = get_activation_timestamp();
@@ -68,6 +114,12 @@ void _on_activate(GtkMenuItem* item, gpointer user_data) {
     fl_value_set_string_take(
         result_data, "activationTimestamp",
         fl_value_new_int(static_cast<gint64>(activation_timestamp)));
+  }
+  if (plugin_instance->pending_activation_token != nullptr) {
+    fl_value_set_string_take(
+        result_data, "activationToken",
+        fl_value_new_string(plugin_instance->pending_activation_token));
+    g_clear_pointer(&plugin_instance->pending_activation_token, g_free);
   }
   fl_method_channel_invoke_method(plugin_instance->channel,
                                   "onTrayMenuItemClick", result_data, nullptr,
@@ -199,6 +251,17 @@ static void tray_manager_plugin_handle_method_call(TrayManagerPlugin* self,
 }
 
 static void tray_manager_plugin_dispose(GObject* object) {
+  TrayManagerPlugin* self = TRAY_MANAGER_PLUGIN(object);
+  if (self->session_bus != nullptr && self->session_bus_filter_id != 0) {
+    g_dbus_connection_remove_filter(self->session_bus,
+                                    self->session_bus_filter_id);
+    self->session_bus_filter_id = 0;
+  }
+  g_clear_object(&self->session_bus);
+  g_clear_pointer(&self->pending_activation_token, g_free);
+  if (plugin_instance == self) {
+    plugin_instance = nullptr;
+  }
   G_OBJECT_CLASS(tray_manager_plugin_parent_class)->dispose(object);
 }
 
@@ -227,6 +290,16 @@ void tray_manager_plugin_register_with_registrar(FlPluginRegistrar* registrar) {
                             "tray_manager", FL_METHOD_CODEC(codec));
   fl_method_channel_set_method_call_handler(
       plugin->channel, method_call_cb, g_object_ref(plugin), g_object_unref);
+
+  g_autoptr(GError) error = nullptr;
+  plugin->session_bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &error);
+  if (plugin->session_bus != nullptr) {
+    plugin->session_bus_filter_id = g_dbus_connection_add_filter(
+        plugin->session_bus, session_bus_filter, nullptr, nullptr);
+  } else {
+    g_warning("Failed to connect to the session bus: %s",
+              error == nullptr ? "unknown error" : error->message);
+  }
 
   plugin_instance = plugin;
 

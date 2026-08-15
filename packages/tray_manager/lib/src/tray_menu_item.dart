@@ -2,13 +2,19 @@ import 'package:menu_base/menu_base.dart';
 
 /// Details associated with a native tray menu item activation.
 class TrayMenuItemClickDetails {
-  const TrayMenuItemClickDetails({this.activationTimestamp});
+  const TrayMenuItemClickDetails({
+    this.activationTimestamp,
+    this.activationToken,
+  });
 
   /// The native input event timestamp, when the platform provides one.
   ///
   /// On Linux this can be forwarded to a window presentation request so the
   /// window manager can associate it with the user's tray menu interaction.
   final int? activationTimestamp;
+
+  /// The Wayland activation token supplied by the system tray host.
+  final String? activationToken;
 }
 
 typedef TrayMenuItemClickWithDetails = void Function(
