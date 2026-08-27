@@ -116,7 +116,7 @@ class TrayManagerPlugin : public flutter::Plugin {
   void TrayManagerPlugin::_CreateMenu(HMENU menu, flutter::EncodableMap args);
   void TrayManagerPlugin::_ApplyIcon();
 
-  // Called for top-level WindowProc delegation.
+  // Called for messages forwarded by the dedicated tray window.
   std::optional<LRESULT> TrayManagerPlugin::HandleWindowProc(HWND hwnd,
                                                              UINT message,
                                                              WPARAM wparam,
@@ -421,13 +421,19 @@ void TrayManagerPlugin::SetContextMenu(
 void TrayManagerPlugin::PopUpContextMenu(
     const flutter::MethodCall<flutter::EncodableValue>& method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+  if (tray_window_ == nullptr || tray_window_->hwnd() == nullptr) {
+    result->Error("tray_window_unavailable",
+                  "Failed to create the Windows tray owner window.");
+    return;
+  }
+
   const flutter::EncodableMap& args =
       std::get<flutter::EncodableMap>(*method_call.arguments());
 
   bool bringAppToFront =
       std::get<bool>(args.at(flutter::EncodableValue("bringAppToFront")));
 
-  HWND hWnd = GetMainWindow();
+  HWND hWnd = tray_window_->hwnd();
 
   double x, y;
 
@@ -443,7 +449,7 @@ void TrayManagerPlugin::PopUpContextMenu(
   y = cursorPos.y;
 
   if (bringAppToFront) {
-    SetForegroundWindow(hWnd);
+    SetForegroundWindow(GetMainWindow());
   }
   TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, static_cast<int>(x),
                  static_cast<int>(y), 0, hWnd, NULL);
