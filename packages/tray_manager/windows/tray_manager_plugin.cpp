@@ -1,4 +1,5 @@
 #include "include/tray_manager/tray_manager_plugin.h"
+#include "tray_window.h"
 
 // This must be included before many other Windows headers.
 #include <stdio.h>
@@ -41,19 +42,17 @@ static bool g_darkModeApisInitialized = false;
 static bool g_darkModeLastIsDark = false;
 
 static void InitializeDarkModeApis() {
-  if (g_darkModeApisInitialized) return;
+  if (g_darkModeApisInitialized)
+    return;
 
   HMODULE hUxtheme = LoadLibrary(L"uxtheme.dll");
   if (hUxtheme) {
-    g_setPreferredAppMode =
-        reinterpret_cast<SetPreferredAppModeFunc>(
-            GetProcAddress(hUxtheme, MAKEINTRESOURCEA(135)));
-    g_allowDarkModeForWindow =
-        reinterpret_cast<AllowDarkModeForWindowFunc>(
-            GetProcAddress(hUxtheme, MAKEINTRESOURCEA(133)));
-    g_flushMenuThemes =
-        reinterpret_cast<FlushMenuThemesFunc>(
-            GetProcAddress(hUxtheme, MAKEINTRESOURCEA(136)));
+    g_setPreferredAppMode = reinterpret_cast<SetPreferredAppModeFunc>(
+        GetProcAddress(hUxtheme, MAKEINTRESOURCEA(135)));
+    g_allowDarkModeForWindow = reinterpret_cast<AllowDarkModeForWindowFunc>(
+        GetProcAddress(hUxtheme, MAKEINTRESOURCEA(133)));
+    g_flushMenuThemes = reinterpret_cast<FlushMenuThemesFunc>(
+        GetProcAddress(hUxtheme, MAKEINTRESOURCEA(136)));
   }
   g_darkModeApisInitialized = true;
 }
@@ -61,7 +60,8 @@ static void InitializeDarkModeApis() {
 static void ApplyDarkModeToMenu(HWND hwnd, bool isDark) {
   InitializeDarkModeApis();
 
-  if (isDark == g_darkModeLastIsDark && g_darkModeApisInitialized) return;
+  if (isDark == g_darkModeLastIsDark && g_darkModeApisInitialized)
+    return;
   g_darkModeLastIsDark = isDark;
 
   if (g_setPreferredAppMode) {
@@ -104,15 +104,14 @@ class TrayManagerPlugin : public flutter::Plugin {
   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> g_converter;
 
   flutter::PluginRegistrarWindows* registrar;
-  NOTIFYICONDATA nid;
-  NOTIFYICONIDENTIFIER niif;
+  NOTIFYICONDATA nid{};
+  NOTIFYICONIDENTIFIER niif{};
   // do create pop-up menu only once.
   HMENU hMenu = CreatePopupMenu();
   bool tray_icon_setted = false;
   UINT windows_taskbar_created_message_id = 0;
-
-  // The ID of the WindowProc delegate registration.
-  int window_proc_id = -1;
+  std::unique_ptr<TrayWindow> tray_window_;
+  bool menu_is_dark_ = false;
 
   void TrayManagerPlugin::_CreateMenu(HMENU menu, flutter::EncodableMap args);
   void TrayManagerPlugin::_ApplyIcon();
@@ -123,6 +122,8 @@ class TrayManagerPlugin : public flutter::Plugin {
                                                              WPARAM wparam,
                                                              LPARAM lparam);
   HWND TrayManagerPlugin::GetMainWindow();
+  void TrayManagerPlugin::RemoveTrayIcon();
+  void TrayManagerPlugin::EmitMenuItemClick(UINT command_id);
   void TrayManagerPlugin::Destroy(
       const flutter::MethodCall<flutter::EncodableValue>& method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
@@ -156,9 +157,9 @@ void TrayManagerPlugin::RegisterWithRegistrar(
     // Skip registration in subwindow
     return;
   }
-  
+
   plugin_already_registered = true;
-  
+
   channel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(), "tray_manager",
       &flutter::StandardMethodCodec::GetInstance());
@@ -174,16 +175,25 @@ void TrayManagerPlugin::RegisterWithRegistrar(
 }
 
 TrayManagerPlugin::TrayManagerPlugin(flutter::PluginRegistrarWindows* registrar)
-    : registrar(registrar) {
-  window_proc_id = registrar->RegisterTopLevelWindowProcDelegate(
-      [this](HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
-        return HandleWindowProc(hwnd, message, wparam, lparam);
-      });
-  windows_taskbar_created_message_id = RegisterWindowMessage(L"TaskbarCreated");
+    : registrar(registrar),
+      tray_window_(std::make_unique<TrayWindow>(
+          [this](HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+            return HandleWindowProc(hwnd, message, wparam, lparam);
+          })) {
+  windows_taskbar_created_message_id =
+      RegisterWindowMessageW(L"TaskbarCreated");
+  if (!tray_window_->Create()) {
+    tray_window_.reset();
+  }
 }
 
 TrayManagerPlugin::~TrayManagerPlugin() {
-  registrar->UnregisterTopLevelWindowProcDelegate(window_proc_id);
+  RemoveTrayIcon();
+  if (hMenu != nullptr) {
+    DestroyMenu(hMenu);
+    hMenu = nullptr;
+  }
+  tray_window_.reset();
 }
 
 void TrayManagerPlugin::_CreateMenu(HMENU menu, flutter::EncodableMap args) {
@@ -241,18 +251,8 @@ std::optional<LRESULT> TrayManagerPlugin::HandleWindowProc(HWND hWnd,
                                                            WPARAM wParam,
                                                            LPARAM lParam) {
   std::optional<LRESULT> result;
-  if (message == WM_DESTROY) {
-    if (tray_icon_setted) {
-      Shell_NotifyIcon(NIM_DELETE, &nid);
-      DestroyIcon(nid.hIcon);
-    }
-  } else if (message == WM_COMMAND) {
-    flutter::EncodableMap eventData = flutter::EncodableMap();
-    eventData[flutter::EncodableValue("id")] =
-        flutter::EncodableValue((int)wParam);
-
-    channel->InvokeMethod("onTrayMenuItemClick",
-                          std::make_unique<flutter::EncodableValue>(eventData));
+  if (message == WM_COMMAND) {
+    EmitMenuItemClick(static_cast<UINT>(wParam));
   } else if (message == WM_MYMESSAGE) {
     switch (lParam) {
       case WM_LBUTTONUP:
@@ -295,12 +295,30 @@ HWND TrayManagerPlugin::GetMainWindow() {
   return ::GetAncestor(registrar->GetView()->GetNativeWindow(), GA_ROOT);
 }
 
+void TrayManagerPlugin::RemoveTrayIcon() {
+  if (tray_icon_setted) {
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    tray_icon_setted = false;
+  }
+  if (nid.hIcon != nullptr) {
+    DestroyIcon(nid.hIcon);
+    nid.hIcon = nullptr;
+  }
+}
+
+void TrayManagerPlugin::EmitMenuItemClick(UINT command_id) {
+  flutter::EncodableMap eventData = flutter::EncodableMap();
+  eventData[flutter::EncodableValue("id")] =
+      flutter::EncodableValue(static_cast<int>(command_id));
+
+  channel->InvokeMethod("onTrayMenuItemClick",
+                        std::make_unique<flutter::EncodableValue>(eventData));
+}
+
 void TrayManagerPlugin::Destroy(
     const flutter::MethodCall<flutter::EncodableValue>& method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-  Shell_NotifyIcon(NIM_DELETE, &nid);
-  DestroyIcon(nid.hIcon);
-  tray_icon_setted = false;
+  RemoveTrayIcon();
 
   result->Success(flutter::EncodableValue(true));
 }
@@ -308,6 +326,12 @@ void TrayManagerPlugin::Destroy(
 void TrayManagerPlugin::SetIcon(
     const flutter::MethodCall<flutter::EncodableValue>& method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+  if (tray_window_ == nullptr || tray_window_->hwnd() == nullptr) {
+    result->Error("tray_window_unavailable",
+                  "Failed to create the Windows tray owner window.");
+    return;
+  }
+
   const flutter::EncodableMap& args =
       std::get<flutter::EncodableMap>(*method_call.arguments());
 
@@ -340,7 +364,7 @@ void TrayManagerPlugin::_ApplyIcon() {
 
     ZeroMemory(&nid, sizeof(NOTIFYICONDATA));
     nid.cbSize = sizeof(NOTIFYICONDATA);
-    nid.hWnd = GetMainWindow();
+    nid.hWnd = tray_window_->hwnd();
     nid.uID = 1;
     nid.hIcon = hIconBackup;
     StringCchCopy(nid.szTip, _countof(nid.szTip), szTipBackup);
