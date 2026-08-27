@@ -8,6 +8,7 @@ set(PLUGIN_NAME "tray_manager_plugin")
 
 add_library(${PLUGIN_NAME} SHARED
   "tray_manager_plugin.cpp"
+  "tray_window.cpp"
 )
 apply_standard_settings(${PLUGIN_NAME})
 set_target_properties(${PLUGIN_NAME} PROPERTIES

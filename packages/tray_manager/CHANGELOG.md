@@ -1,5 +1,6 @@
 ## 0.5.3
 
+* fix(windows): dismiss tray context menus on outside clicks without foregrounding the app
 * feat(macos): add Swift Package Manager support
 * chore: replace mostly_reasonable_lints with flutter_lints
 * ci: align workflows with screen_retriever
