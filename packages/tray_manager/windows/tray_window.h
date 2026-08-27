@@ -8,8 +8,7 @@
 
 class TrayWindow {
  public:
-  using MessageHandler =
-      std::function<std::optional<LRESULT>(HWND, UINT, WPARAM, LPARAM)>;
+  using MessageHandler = std::function<std::optional<LRESULT>(HWND, UINT, WPARAM, LPARAM)>;
 
   explicit TrayWindow(MessageHandler message_handler);
   ~TrayWindow();
@@ -21,10 +20,7 @@ class TrayWindow {
   HWND hwnd() const;
 
  private:
-  static LRESULT CALLBACK WindowProc(HWND hwnd,
-                                     UINT message,
-                                     WPARAM wparam,
-                                     LPARAM lparam);
+  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 
   MessageHandler message_handler_;
   HINSTANCE instance_ = nullptr;
