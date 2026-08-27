@@ -79,6 +79,8 @@ static void ApplyDarkModeToMenu(HWND hwnd, bool is_dark) {
 
 namespace {
 
+constexpr UINT kMenuCommandIdOffset = 1;
+
 const flutter::EncodableValue* ValueOrNull(const flutter::EncodableMap& map,
                                            const char* key) {
   auto it = map.find(flutter::EncodableValue(key));
@@ -218,7 +220,7 @@ void TrayManagerPlugin::_CreateMenu(HMENU menu, flutter::EncodableMap args) {
     bool disabled =
         std::get<bool>(item_map.at(flutter::EncodableValue("disabled")));
 
-    UINT_PTR item_id = id;
+    UINT_PTR item_id = static_cast<UINT_PTR>(id) + kMenuCommandIdOffset;
     UINT uFlags = MF_STRING;
 
     if (disabled) {
@@ -446,7 +448,7 @@ void TrayManagerPlugin::PopUpContextMenu(
   PostMessageW(owner, WM_NULL, 0, 0);
 
   if (command_id != 0) {
-    EmitMenuItemClick(command_id);
+    EmitMenuItemClick(command_id - kMenuCommandIdOffset);
   } else {
     Shell_NotifyIconW(NIM_SETFOCUS, &nid);
   }
