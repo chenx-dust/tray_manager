@@ -438,11 +438,11 @@ void TrayManagerPlugin::PopUpContextMenu(
   ApplyDarkModeToMenu(owner, menu_is_dark_);
 
   SetForegroundWindow(owner);
-  const UINT command_id = TrackPopupMenu(
-      hMenu,
-      TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD |
-          TPM_NONOTIFY,
-      cursor_position.x, cursor_position.y, 0, owner, nullptr);
+  const UINT command_id =
+      TrackPopupMenu(hMenu,
+                     TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_RIGHTBUTTON |
+                         TPM_RETURNCMD | TPM_NONOTIFY,
+                     cursor_position.x, cursor_position.y, 0, owner, nullptr);
   PostMessageW(owner, WM_NULL, 0, 0);
 
   if (command_id != 0) {
